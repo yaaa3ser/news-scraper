@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Aggregator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #0a0f16;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .news-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 15px;
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+        
+        .news-item {
+            display: flex;
+            background-color: #141c26;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+            height: 90px;
+            width: 100%;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .news-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .item-image {
+            width: 90px;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+            background-color: #1e293b;
+        }
+        
+        .item-content {
+            flex: 1;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .item-title {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            color: #e2e8f0;
+            text-decoration: none;
+        }
+        
+        .item-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .item-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+        
+        .item-source {
+            font-size: 10px;
+            font-weight: 600;
+            color: #00ff9d;
+            background-color: rgba(0, 255, 157, 0.1);
+            padding: 3px 8px;
+            border-radius: 10px;
+            max-width: 112px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+        }
+        
+        .item-time {
+            font-size: 11px;
+            color: #64748b;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .news-list {
+                max-width: 100%;
+            }
+            
+            .item-content {
+                padding: 10px;
+            }
+            
+            .item-title {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="news-list" id="articles">
+        <div class="loading">Loading articles...</div>
+    </div>
+    
+    <script>
+        // Function to format time ago
+        function timeAgo(dateString) {
+            const now = new Date();
+            const publishedDate = new Date(dateString);
+            const diffInMs = now - publishedDate;
+            const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+            const diffInDays = Math.floor(diffInHours / 24);
+            
+            if (diffInHours < 1) {
+                return 'Just now';
+            } else if (diffInHours < 24) {
+                return `${diffInHours}h ago`;
+            } else if (diffInDays === 1) {
+                return '1d ago';
+            } else {
+                return `${diffInDays}d ago`;
+            }
+        }
+        
+        async function fetchArticles() {
+            try {
+                const response = await fetch('http://localhost:8000/articles');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const articles = await response.json();
+                const container = document.getElementById('articles');
+                
+                if (!articles || articles.length === 0) {
+                    container.innerHTML = '<div class="error">No articles found</div>';
+                    return;
+                }
+                
+                container.innerHTML = '';
+                
+                articles.forEach(article => {
+                    const newsItem = document.createElement('div');
+                    newsItem.className = 'news-item';
+                    
+                    console.log('Processing article image:', article);
+
+                    const imageUrl = article.main_picture_of_article_url || 'https://via.placeholder.com/90x90?text=No+Image';
+                    const timeAgoText = timeAgo(article.published_utc);
+                    
+                    newsItem.innerHTML = `
+                        <div class="item-image" style="background-image: url('${imageUrl}')"></div>
+                        <div class="item-content">
+                            <div class="item-title">
+                                <a href="/static/article.html?url=${encodeURIComponent(article.url_of_article)}">${article.title_of_article}</a>
+                            </div>
+                            <div class="item-meta">
+                                <div class="item-source">${article.main_category}</div>
+                                <div class="item-time">${timeAgoText}</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add click handler for the entire news item
+                    newsItem.addEventListener('click', (e) => {
+                        if (e.target.tagName !== 'A') {
+                            window.location.href = `/static/article.html?url=${encodeURIComponent(article.url_of_article)}`;
+                        }
+                    });
+                    
+                    container.appendChild(newsItem);
+                });
+                
+            } catch (error) {
+                console.error('Error fetching articles:', error);
+                const container = document.getElementById('articles');
+                container.innerHTML = `
+                    <div class="error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Failed to load articles. Please check your connection and try again.</p>
+                        <p><small>Error: ${error.message}</small></p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initial load
+        fetchArticles();
+
+        // Refresh every 60 seconds
+        setInterval(fetchArticles, 60000);
+        
+        // Add visibility change handler to refresh when tab becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                fetchArticles();
+            }
+        });
+    </script>
+</body>
+</html>
+

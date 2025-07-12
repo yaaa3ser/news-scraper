@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: news_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    ports:
+      - "5432:5432"
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+    volumes:
+      - .:/app
+  bbc:
+    build: .
+    command: python scrapers/bbc_scraper.py
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+    volumes:
+      - .:/app
+  cnn:
+    build: .
+    command: python scrapers/cnn_scraper.py
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+    volumes:
+      - .:/app
+  newsmax:
+    build: .
+    command: python scrapers/newsmax_scraper.py
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+    volumes:
+      - .:/app
